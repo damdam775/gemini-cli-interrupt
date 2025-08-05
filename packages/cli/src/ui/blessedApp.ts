@@ -26,10 +26,7 @@ interface BlessedAppOptions {
   interruptMode?: boolean;
 }
 
-export function runBlessedApp({
-  config,
-  startupWarnings = [],
-}: BlessedAppOptions) {
+
   const screen = blessed.screen({ smartCSR: true });
   const output = blessed.box({
     top: 0,
@@ -62,16 +59,7 @@ export function runBlessedApp({
   }
   screen.render();
 
-  screen.key(['C-c'], () => {
-    screen.destroy();
-    process.exit(0);
-  });
 
-  (async () => {
-    const geminiClient = config.getGeminiClient();
-    const toolRegistry: ToolRegistry = await config.getToolRegistry();
-
-    input.on('submit', async (text) => {
       input.clearValue();
       input.focus();
       if (!text.trim()) {
@@ -169,6 +157,6 @@ export function runBlessedApp({
         screen.render();
       }
     });
-  })();
+
 }
 

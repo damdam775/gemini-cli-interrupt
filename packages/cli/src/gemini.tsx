@@ -260,13 +260,6 @@ export async function main() {
   if (shouldBeInteractive) {
     const version = await getCliVersion();
     setWindowTitle(basename(workspaceRoot), settings);
-    runBlessedApp({
-      config,
-      settings,
-      startupWarnings,
-      version,
-      interruptMode: argv.interrupt ?? false,
-    });
 
     checkForUpdates()
       .then((info) => {
@@ -278,6 +271,7 @@ export async function main() {
           console.error('Update check failed:', err);
         }
       });
+
 
     return;
   }
