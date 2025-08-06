@@ -544,6 +544,23 @@ export async function invokeMcpPrompt(
 }
 
 /**
+ * Attempt to close a transport without blocking indefinitely.
+ * Some transports may never resolve their close() promise if the
+ * underlying process has already died or cannot be terminated.
+ */
+async function closeTransportSafely(transport: Transport): Promise<void> {
+  const CLOSE_TIMEOUT_MS = 2000;
+  try {
+    await Promise.race([
+      transport.close(),
+      new Promise<void>((resolve) => setTimeout(resolve, CLOSE_TIMEOUT_MS)),
+    ]);
+  } catch {
+    // Ignore errors while closing transport
+  }
+}
+
+/**
  * Creates and connects an MCP client to a server based on the provided configuration.
  * It determines the appropriate transport (Stdio, SSE, or Streamable HTTP) and
  * establishes a connection. It also applies a patch to handle request timeouts.
@@ -587,7 +604,7 @@ export async function connectToMcpServer(
       });
       return mcpClient;
     } catch (error) {
-      await transport.close();
+      await closeTransportSafely(transport);
       throw error;
     }
   } catch (error) {

@@ -35,7 +35,6 @@ You have two options to install Gemini CLI.
 
 1. **Prerequisites:** Ensure you have [Node.js version 20](https://nodejs.org/en/download) or higher installed.
 2. **Run the CLI:** Execute one of the following commands in your terminal:
-
    - Standard mode:
      ```bash
      npx https://github.com/damdam775/gemini-cli-interrupt
