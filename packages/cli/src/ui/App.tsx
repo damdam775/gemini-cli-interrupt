@@ -12,7 +12,6 @@ import {
   Static,
   Text,
   useStdin,
-  useStdout,
   useInput,
   type Key as InkKeyType,
 } from 'ink';
@@ -30,6 +29,7 @@ import { Header } from './components/Header.js';
 import { LoadingIndicator } from './components/LoadingIndicator.js';
 import { AutoAcceptIndicator } from './components/AutoAcceptIndicator.js';
 import { ShellModeIndicator } from './components/ShellModeIndicator.js';
+import { InterruptModeIndicator } from './components/InterruptModeIndicator.js';
 import { InputPrompt } from './components/InputPrompt.js';
 import { Footer } from './components/Footer.js';
 import { ThemeDialog } from './components/ThemeDialog.js';
@@ -83,12 +83,13 @@ import {
   UserTierId,
 } from '@google/gemini-cli-core';
 import { UpdateObject } from './utils/updateCheck.js';
-import ansiEscapes from 'ansi-escapes';
 import { OverflowProvider } from './contexts/OverflowContext.js';
 import { ShowMoreLines } from './components/ShowMoreLines.js';
 import { PrivacyNotice } from './privacy/PrivacyNotice.js';
 import { setUpdateHandler } from '../utils/handleAutoUpdate.js';
 import { appEvents, AppEvent } from '../utils/events.js';
+import { PlanProvider } from './contexts/PlanContext.js';
+import { PlanSidebar } from './components/PlanSidebar.js';
 
 const CTRL_EXIT_PROMPT_DURATION_MS = 1000;
 
@@ -97,21 +98,29 @@ interface AppProps {
   settings: LoadedSettings;
   startupWarnings?: string[];
   version: string;
+  interruptMode?: boolean;
 }
 
 export const AppWrapper = (props: AppProps) => (
   <SessionStatsProvider>
     <VimModeProvider settings={props.settings}>
-      <App {...props} />
+      <PlanProvider>
+        <App {...props} />
+      </PlanProvider>
     </VimModeProvider>
   </SessionStatsProvider>
 );
 
-const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
+const App = ({
+  config,
+  settings,
+  startupWarnings = [],
+  version,
+  interruptMode = false,
+}: AppProps) => {
   const isFocused = useFocus();
   useBracketedPaste();
   const [updateInfo, setUpdateInfo] = useState<UpdateObject | null>(null);
-  const { stdout } = useStdout();
   const nightly = version.includes('nightly');
   const { history, addItem, clearItems, loadHistory } = useHistory();
 
@@ -139,9 +148,8 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
   const [staticNeedsRefresh, setStaticNeedsRefresh] = useState(false);
   const [staticKey, setStaticKey] = useState(0);
   const refreshStatic = useCallback(() => {
-    stdout.write(ansiEscapes.clearTerminal);
     setStaticKey((prev) => prev + 1);
-  }, [setStaticKey, stdout]);
+  }, [setStaticKey]);
 
   const [geminiMdFileCount, setGeminiMdFileCount] = useState<number>(0);
   const [debugMessage, setDebugMessage] = useState<string>('');
@@ -173,6 +181,8 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
     IdeContext | undefined
   >();
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [interruptModeEnabled, setInterruptModeEnabled] =
+    useState(interruptMode);
 
   useEffect(() => {
     const unsubscribe = ideContext.subscribeToIdeContext(setIdeContextState);
@@ -505,7 +515,9 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
     performMemoryRefresh,
     modelSwitchedFromQuotaError,
     setModelSwitchedFromQuotaError,
+    interruptModeEnabled,
     refreshStatic,
+    codex/use-cli-library-to-fix-flickering
   );
 
   // Input handling
@@ -595,6 +607,18 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
         return;
       }
       handleExit(ctrlDPressedOnce, setCtrlDPressedOnce, ctrlDTimerRef);
+    } else if (key.ctrl && (input === 'n' || input === 'N')) {
+      const newValue = !interruptModeEnabled;
+      setInterruptModeEnabled(newValue);
+      addItem(
+        {
+          type: MessageType.INFO,
+          text: newValue
+            ? 'Interrupt mode enabled.'
+            : 'Interrupt mode disabled.',
+        },
+        Date.now(),
+      );
     } else if (key.ctrl && input === 's' && !enteringConstrainHeightMode) {
       setConstrainHeight(false);
     }
@@ -646,7 +670,10 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
   }, [history, logger]);
 
   const isInputActive =
-    streamingState === StreamingState.Idle && !initError && !isProcessing;
+    (streamingState === StreamingState.Idle ||
+      (interruptModeEnabled && streamingState === StreamingState.Responding)) &&
+    !initError &&
+    !isProcessing;
 
   const handleClearScreen = useCallback(() => {
     clearItems();
@@ -759,7 +786,8 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
       </Box>
     );
   }
-  const mainAreaWidth = Math.floor(terminalWidth * 0.9);
+  const sidebarWidth = 30;
+  const mainAreaWidth = Math.max(terminalWidth - sidebarWidth, 0);
   const debugConsoleMaxHeight = Math.floor(Math.max(terminalHeight * 0.2, 5));
   // Arbitrary threshold to ensure that items in the static area are large
   // enough but not too large to make the terminal hard to use.
@@ -770,7 +798,8 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
 
   return (
     <StreamingContext.Provider value={streamingState}>
-      <Box flexDirection="column" width="90%">
+      <Box>
+        <Box flexDirection="column" width={mainAreaWidth}>
         {/*
          * The Static component is an Ink intrinsic in which there can only be 1 per application.
          * Because of this restriction we're hacking it slightly by having a 'header' item here to
@@ -788,7 +817,7 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
             <Box flexDirection="column" key="header">
               {!settings.merged.hideBanner && (
                 <Header
-                  terminalWidth={terminalWidth}
+                  terminalWidth={mainAreaWidth}
                   version={version}
                   nightly={nightly}
                 />
@@ -974,6 +1003,9 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
                         approvalMode={showAutoAcceptIndicator}
                       />
                     )}
+                  {interruptModeEnabled && !shellModeActive && (
+                    <InterruptModeIndicator />
+                  )}
                   {shellModeActive && <ShellModeIndicator />}
                 </Box>
               </Box>
@@ -1070,6 +1102,8 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
             vimMode={vimModeEnabled ? vimMode : undefined}
           />
         </Box>
+        </Box>
+        <PlanSidebar width={sidebarWidth} />
       </Box>
     </StreamingContext.Provider>
   );
