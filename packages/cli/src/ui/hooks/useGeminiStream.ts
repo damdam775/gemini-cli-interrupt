@@ -256,7 +256,11 @@ export const useGeminiStream = (
   performMemoryRefresh: () => Promise<void>,
   modelSwitchedFromQuotaError: boolean,
   setModelSwitchedFromQuotaError: React.Dispatch<React.SetStateAction<boolean>>,
+
   interruptMode = false,
+=======
+  onEditorClose: () => void,
+codex/use-cli-library-to-fix-flickering
 ) => {
   const [initError, setInitError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -299,6 +303,7 @@ export const useGeminiStream = (
       config,
       setPendingHistoryItem,
       getPreferredEditor,
+      onEditorClose,
     );
 
   const pendingToolCallGroupDisplay = useMemo(

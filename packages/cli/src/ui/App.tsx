@@ -286,6 +286,9 @@ const App = ({
     try {
       const { memoryContent, fileCount } = await loadHierarchicalGeminiMemory(
         process.cwd(),
+        settings.merged.loadMemoryFromIncludeDirectories
+          ? config.getWorkspaceContext().getDirectories()
+          : [],
         config.getDebugMode(),
         config.getFileService(),
         settings.merged,
@@ -490,6 +493,7 @@ const App = ({
     openPrivacyNotice,
     toggleVimEnabled,
     setIsProcessing,
+    setGeminiMdFileCount,
   );
 
   const {
@@ -512,6 +516,8 @@ const App = ({
     modelSwitchedFromQuotaError,
     setModelSwitchedFromQuotaError,
     interruptModeEnabled,
+    refreshStatic,
+    codex/use-cli-library-to-fix-flickering
   );
 
   // Input handling
@@ -622,7 +628,7 @@ const App = ({
     if (config) {
       setGeminiMdFileCount(config.getGeminiMdFileCount());
     }
-  }, [config]);
+  }, [config, config.getGeminiMdFileCount]);
 
   const logger = useLogger();
   const [userMessages, setUserMessages] = useState<string[]>([]);
