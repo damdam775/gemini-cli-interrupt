@@ -29,7 +29,7 @@
     "sandboxImageUri": "us-docker.pkg.dev/gemini-code-dev/gemini-cli/sandbox:0.1.16"
   },
   "dependencies": {
-    "@google/gemini-cli-core": "file:../core",
+    "@google/gemini-cli-core": "^0.1.16",
     "@google/genai": "1.9.0",
     "@iarna/toml": "^2.2.5",
     "@types/update-notifier": "^6.0.8",
