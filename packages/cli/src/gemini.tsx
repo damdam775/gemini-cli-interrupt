@@ -272,7 +272,6 @@ export async function main() {
         }
       });
 
-
     return;
   }
   // If not a TTY, read from stdin

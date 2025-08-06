@@ -982,7 +982,9 @@ describe('useGeminiStream', () => {
         expect(mockAddItem).toHaveBeenCalledWith(
           {
             type: MessageType.GEMINI,
-            text: expect.stringContaining('First let\'s deal with this user demand: second query.'),
+            text: expect.stringContaining(
+              "First let's deal with this user demand: second query.",
+            ),
           },
           expect.any(Number),
         );

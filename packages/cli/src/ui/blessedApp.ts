@@ -125,13 +125,14 @@ export async function runBlessedApp({
               abortController.signal,
             );
             if (toolResponse.error) {
-              conversation +=
-                `Error executing tool ${fc.name}: ${
-                  toolResponse.resultDisplay || toolResponse.error.message
-                }\n`;
+              conversation += `Error executing tool ${fc.name}: ${
+                toolResponse.resultDisplay || toolResponse.error.message
+              }\n`;
               output.setContent(conversation);
               screen.render();
-              if (toolResponse.errorType === ToolErrorType.UNHANDLED_EXCEPTION) {
+              if (
+                toolResponse.errorType === ToolErrorType.UNHANDLED_EXCEPTION
+              ) {
                 return;
               }
             }
@@ -171,4 +172,3 @@ export async function runBlessedApp({
     screen.on('destroy', resolve);
   });
 }
-
